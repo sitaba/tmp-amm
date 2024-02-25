@@ -3,14 +3,18 @@ bitbake-layers create-layer --priority 100 meta-local
 bitbake-layers add-layer meta-local
 cd meta-local
 mkdir -p recipes-config/qemu-config/
-cat > qemu-config-agl-ivi-demo-platform-flutter.bbappend <<"EOF"
+cat > qemu-config-agl-demo-platform.bbappend <<"EOF"
 FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
-SRC_URI = "file://agl-demo-platform.conf"
+SRC_URI = " \
+    file://agl-demo-platform.conf \
+    file://agl-ivi-demo-platform-flutter.conf \
+"
 
-do_install() {
+do_install:append() {
     install -d ${D}${sysconfdir}/agl-qemu-runner
     install -m 0644 ${WORKDIR}/agl-demo-platform.conf ${D}${sysconfdir}/agl-qemu-runner/
+    install -m 0644 ${WORKDIR}/agl-ivi-demo-platform-flutter.conf ${D}${sysconfdir}/agl-qemu-runner/
 }
 EOF
 echo 'FILESEXTRAPATHS:prepend := "${THISDIR}/files:"' > qemu-config-agl-cluster-demo-platform-flutter.bbappend
@@ -21,10 +25,10 @@ QEMU_SMP_OPT="-smp 4"
 QEMU_MEM_OPT="-m 2G"
 # With touchscreen plugged into the bottom connector of the 2x USB 2.0
 # on the reference hardware
-QEMU_INPUT_OPT="-device qemu-xhci -usb -device usb-host,hostbus=1,hostport=5"
+#QEMU_INPUT_OPT="-device qemu-xhci -usb -device usb-host,hostbus=1,hostport=5"
 # Fallback for touchscreen or other pointing device plugged in elsewhere
 QEMU_INPUT_OPT="-device virtio-tablet-device"
-QEMU_AUDIO_OPT="-audiodev alsa,id=agl -device intel-hda -device hda-duplex,audiodev=agl"
+#QEMU_AUDIO_OPT="-audiodev alsa,id=agl -device intel-hda -device hda-duplex,audiodev=agl"
 QEMU_NET_OPT="-netdev bridge,br=vmnet0,id=net0 -device virtio-net-device,mac=52:54:00:12:00:02,netdev=net0"
 #QEMU_CAN_OPT="-object can-bus,id=canbus0 -object can-host-socketcan,id=canhost0,if=can0,canbus=canbus0 -device kvaser_pci,canbus=canbus0"
 QEMU_KERNEL_CMDLINE_APPEND="root=/dev/vda rw mem=2048M video=Virtual-1:1920x1080"
@@ -35,10 +39,10 @@ QEMU_SMP_OPT="-smp 4"
 QEMU_MEM_OPT="-m 2G"
 # With touchscreen plugged into the bottom connector of the 2x USB 2.0
 # on the reference hardware
-QEMU_INPUT_OPT="-device qemu-xhci -usb -device usb-host,hostbus=1,hostport=5"
+#QEMU_INPUT_OPT="-device qemu-xhci -usb -device usb-host,hostbus=1,hostport=5"
 # Fallback for touchscreen or other pointing device plugged in elsewhere
 QEMU_INPUT_OPT="-device virtio-tablet-device"
-QEMU_AUDIO_OPT="-audiodev alsa,id=agl -device intel-hda -device hda-duplex,audiodev=agl"
+#QEMU_AUDIO_OPT="-audiodev alsa,id=agl -device intel-hda -device hda-duplex,audiodev=agl"
 QEMU_NET_OPT="-netdev bridge,br=vmnet0,id=net0 -device virtio-net-device,mac=52:54:00:12:00:02,netdev=net0"
 #QEMU_CAN_OPT="-object can-bus,id=canbus0 -object can-host-socketcan,id=canhost0,if=can0,canbus=canbus0 -device kvaser_pci,canbus=canbus0"
 QEMU_KERNEL_CMDLINE_APPEND="root=/dev/vda rw mem=2048M video=Virtual-1:1920x1080"
@@ -50,4 +54,19 @@ QEMU_MEM_OPT="-m 1G"
 QEMU_NET_OPT="-netdev bridge,br=vmnet0,id=net0 -device virtio-net-device,mac=52:54:00:12:00:03,netdev=net0"
 QEMU_KERNEL_CMDLINE_APPEND="root=/dev/vda rw mem=2048M video=Virtual-1:1920x1080"
 EOF
+
+<scp files>
+xzcat agl-kvm-demo-platform-raspberrypi4-64.wic.xz | sudo dd of=<sdcard_device_name> bs=4M status=progress
+
+ssh root@192.168.0.4 mkdir /var/lib/machines/agl-ivi-demo-platform-flutter
+scp ivi-demo-new-flutter/agl-ivi-demo-platform-flutter-virtio-aarch64.ext4 root@192.168.0.4:/var/lib/machines/agl-ivi-demo-platform-flutter/
+scp ivi-demo-new-flutter/Image  root@192.168.0.4:/var/lib/machines/agl-ivi-demo-platform-flutter/Image-virtio-aarch64.bin
+
+systemctl disable agl-qemu-runner@agl-demo-platform.service
+systemctl disable agl-qemu-runner@agl-cluster-demo-platform-flutter.service
+sed -i '/agl-demo-platform/s/^#//' /etc/xdg/weston/weston.ini
+sed -i '/agl-demo-platform/aagl-shell-app-id=agl-ivi-demo-platform-flutter' /etc/xdg/weston/weston.ini
+sync
+reboot
+
 
