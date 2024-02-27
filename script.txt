@@ -1,0 +1,232 @@
+P.1
+Hello everyone.
+My name is Kazuki Kuzuu from Panasonic Automotive Systems.
+Thank you for joining my session today.
+
+P.2
+Before I get down to business, I would like to briefly introduce myself.
+I have been working in the embedded industry and hypervisors for 4 years.
+I usually participate in SDV-EG and am currently interested in areas such as cloud native and functional safety.
+As for my personal tastes, I play a lot of PC and VR games.
+I look forward to a future where this type of entertainment is incorporated into automobiles.
+I also like green tea, which I often drink at work and in my free time.
+On the other hand, I do not like vegetables, seafood, and fruits, and I am a picky eater.
+I am a picky eater, but I enjoyed the food served at this venue yesterday.
+I am looking forward to the next one today.
+
+P.3
+This is the agenda for this session.
+First, I will explain what this session is about in the introduction.
+Next, we will introduce the structure and benefits of VirtIO.
+After that, we will give a tutorial on Cloud Native development that can be achieved with VirtIO.
+
+P.4
+Let's start with an introduction.
+
+P.5
+We will briefly review the trends in the automotive industry and the state of AGL, as many of you already explained yesterday.
+In recent years, the automotive industry requires a form of development called Software Defined Vehicle.
+Automotive software, as typified by CASE, requires complex and advanced functions, and it is no longer possible to develop software for each individual vehicle simply by looking at the increase in the number of lines of code.
+With SDV, instead of developing software tailored to the HW, software with the required functions is developed in advance and then installed in the HW as needed.
+
+P.6
+AGL has already developed the necessary functions for SDV so far.
+SDV EG is one such Expert Group that is working on VirtIO, especially for environmental identity.
+Separation of SW from HW is a key element in SDV, and VirtIO contributes significantly to that separation.
+As shown in the figure, AGL utilizes VirtIO on various environments, including Hypervisor, Non-Hypervisor, Multi-ECU, and Cloud environments.
+The tutorial on Cloud Native development introduced in this session is also possible because AGL runs in the Cloud and is identical to other environments.
+
+P.7
+Cloud Native is a form of development that makes good use of Cloud features and places Cloud at the center.
+In this session, software development and verification can be done on the Cloud, and software verified on the Cloud runs in the same way on the Edge environment as it does on the Cloud, which is called Cloud Native.
+In general, utilizing the functions of the Cloud, including service provision and data management, is also called Cloud Native.
+In this diagram, software is first developed on the Cloud.
+The developed software is verified on the Cloud as well, and if there are any problems, the software is returned to the development team.
+Once satisfied with the developed software, it is deployed to the actual HW.
+If the software is enhanced with VirtIO, it can be deployed without any changes to the software.
+If VirtIO is not used, then modifications must be made to the software for the Edge, as Cloud and Edge devices are usually different.
+If this Cloud Native development works, the actual HW is not needed during the Develop and Verify phases.
+Therefore, a thin client to connect to the Cloud is all that is needed, greatly reducing the effort of procuring HW and development environment.
+
+
+P.8
+Now, let's take a look at what VirtIO actually is.
+
+P.9
+VirtIO is a Virtual I/O Device standard developed by OASIS, a standards organization.
+The VirtIO specification is currently version 1.2, and version 1.3 is still being developed.
+The standard document states that VirtIO is a straightforward, efficient, standardized, and extensible mechanism for virtual devices.
+VirtIO is a specification, though additional devices can be added or extensions can be used to implement their own,
+In this presentation, we refer to virtIO as the device described in the OASIS documentation and the functionality upstreamed into the linux-kernel.
+
+P.12
+Here is a list of VirtIOs listed in the current VirtIO specification.
+VirtIO was originally especially useful for virtualization in the server industry, but it is also very useful in the automotive industry, as was shown in various sessions at AMM.
+For this reason, VirtIO is also being standardized for devices such as sensors, CAN, and Multimedia, which are not often used in the server industry.
+
+P.13
+The most powerful advantage of VirtIO is that it can be used as a common protocol for paravirtualization.
+If a particular hypervisor implements its own protocol for communicating with a virtual device, the device driver to use that virtual device will not be available to other hypervisors.
+Since AGL uses VirtIO as a common framework, any Hypervisor or SoC that supports VirtIO can be replaced without major changes to the upper-layer software.
+This is critically important when talking about AGL virtualization.
+
+P.10
+Let's get a little more specific about the VirtIO Framework.
+This figure shows VirtIO embedded in Guest running on Hypervisor.
+Normally, when an application uses a device, it uses the device driver for that device via a library or other means.
+On the other hand, Guest OS with VirtIO uses the VirtIO Driver instead of the device driver that operates the actual device.
+The VirtIO Driver does not directly manipulate the actual physical device, but rather requests the VirtIO Device, a Server VM or Hypervisor application, to do the processing.
+VirtIO Device uses the device driver of the physical device via libraries just like a normal application.
+VirtIO Device is indistinguishable from a physical device from the Guest VM's perspective, and the only driver for that device is VirtIO Drvier.
+For this reason, there is no device driver called VirtIO, but rather a virtio driver for each device, such as virtio-blk, virtio-net, virtio-gpu.
+PCI, MMIO, and Channnel I/O are specified for communication with virtIO Device, and these are used to initialize the device.
+In addition, shared memory and virtqueue are used to convey the requested process.
+
+P.11
+Again, in the Guest branch, VirtIO Device looks like a physical device and communicates with that VirtIO Device.
+For this reason, VirtIO communication is independent of the actual physical device specification.
+This allows the actual physical device to be abstracted, so that the Guest VM only needs to communicate with the VirtIO Device using the VirtIO Driver, no matter what the actual HW is, as shown in the figure on the right.
+In other words, whether the HW is Cloud, AGL RefHW, or Raspberry Pi, it can be regarded as an environment connected to a Virtual Device called VirtIO Device that can communicate with VirtIO Driver.
+
+P.14
+So far we have explained what VirtIO is.
+From here, we will introduce a tutorial on Cloud Native development with SDV using AGL enhanced by VirtIO.
+
+P.15
+First, let us explain the purpose of this tutorial.
+The target audience is assumed to be beginner to intermediate level.
+The flow is to build AGL on the Cloud and evaluate the image on the Cloud.
+Finally, the participants will deploy the image they have evaluated and are satisfied with to Edge and confirm that it works without any modifications to experience the power of VirtIO.
+The ability to deploy the entire image, including the kernel, as is will be especially useful for kernel and security-related developers.
+I have included the working code in the slides so that you can try to reproduce it as much as possible.
+In this tutorial, we used a Raspberry Pi as the Edge device, but if you also use the AGL RefHW as an Edge device with reference to this presentation, you can build an environment where the same Virt AGL image runs on multiple HWs.
+
+P.16
+Here is the entire tutorial process.
+
+P.17
+For building the AGL software, the AGL Documentaion site is helpful.
+As described on that page, the build procedure is as described in the slides and is also referred to in this TUTORIAL.
+
+P.18
+Let's start by preparing the build environment.
+
+P.19
+Since the theme of this tutorial is Cloud Native, I used AWS as the build environment.
+I have included information on the instance I used, but I think you can also build by consulting with the cost and selecting one with fewer cores.
+I used ubuntu 22.04 as AMI.
+After starting the instance, connect to the cloud instance via ssh or other means.
+The instance immediately after startup does not contain packages necessary for building, so install them by referring to the AGL Docs.
+
+P.20
+After the build environment is ready, download AGL Software.
+
+P.21
+The procedure here is almost the same as in AGL Docs.
+Since I specify the manifest in some repo init, if you want to build the same environment as mine, please execute the commands described here.
+However, I think it will work fine without specifying a manifest.
+
+P.22
+Now that the source code has been downloaded, let's actually build AGL enhanced with VirtIO.
+
+P.23
+Here we select virtio_aarch64 as the machine option and build the agl-ivi-demo platform-flutter.
+We did not make any particular changes this time, but it would be a good idea to add an application with the purpose of checking the difference between the default image and the one in Cloud.
+
+P.24
+Next, build the Edge host environment including QEMU.
+
+P.25
+AGL provides a recipe for easily building a QEMU/KVM environment, which we will use this time.
+First, configure the environment by specifying raspberrypi4 as the MACHINE option and adding agl-kvm as the FEATURE.
+Since we used the flutter image as Virt AGL earlier, we will set the Qt image, agl-demo-platform, as Guest_VM1_Image to make the difference easier to understand.
+Also, create a layer for yourself to customize from the next page and add it to bblayers.conf.
+
+P.26
+This page is for setting up additional config files for starting Guest VM.
+
+P.27
+This actually creates the file with the settings you just added.
+Although not listed here, virtio-blk and virtio-gpu are set in the qemu startup script originally included in the image.
+
+P.28
+Also create the config file for the second Guest VM, the Cluster VM.
+
+P.29
+And finally, build the agl-kvm-demo platform.
+
+P.30
+Preparation of the AGL image is now complete.
+Next, we will boot the built Virt AGL image on Cloud and check it.
+
+P.31
+Unlike the previous step, we will use g5g.metal as the instance for evaluation.
+A normal instance of AWS is already a VM launched on AWS Hypervisor, and nested virtualization to launch QEMU on top of it is not allowed.
+Therefore, we will use g5g.metal, which is a bare metal instance that does not run AWS Hypervisor and has aarch64 architecture.
+Metal instances are available in a limited number of regions, so please check the AWS site.
+First, create a developer account that belongs to the sudo and kvm groups, and use this account to work with this instance from now on.
+
+P.32
+First, build QEMU, then install packages for GUI connection to the Cloud instance.
+Once the packages are installed, connect to the cloud again, forwarding the port for RDP communication.
+Launch any RDP Client on the local PC and connect to the forwarded port to connect to the remote desktop of the cloud.
+We will work with this remote desktop from now on in order to check the graphics of the activated AGL.
+
+P.33
+Now let's actually check Virt AGL on Cloud!
+
+P.34
+First, copy the image built in the previous step to the evaluation instance with scp.
+Then, start qemu by specifying that image.
+
+P.35
+Here are the graphics of Virt AGL that I was able to confirm on my evaluation instance.
+If you are not satisfied with the graphics or behavior you see here, you can rebuild Virt AGL and check it again on this evaluation instance.
+Since this is a TUTORIAL, I was satisfied with the latest updated flutter IVI.
+
+P.36
+Satisfied with the image developed in Cloud, we proceed to the final step.
+
+P.37
+First, download the Virt AGL image built with Cloud and the image for raspberrypi to your local PC.
+Copy the image for raspberrypi to the SD card with the dd command.
+It took more than 10 minutes in my environment.
+
+P.38
+And here is the image for raspberrypi booted from the SD card.
+Two VMs are running, Instrument cluster and Qt version of IVI.
+
+P.39
+As the last step, we deploy the Virt AGL image that we have confirmed to work in Cloud to Edge.
+
+P.40
+In general Deploy, Over The Air update is performed, but this time, since it is tutorial, the Virt AGL image is transferred by SCP.
+Then switch the service running IVI for Qt to the service running Virt AGL and restart rasberrypi.
+
+P.41
+Finally, we can see the Virt AGL graphic confirmed by Cloud.
+
+P.42
+This concludes the TUTORIAL.
+Here is a summary of what we have shown you.
+VirtIO enhanced AGL built and evaluated on Cloud.
+We deployed the Virt AGL image we evaluated in the Cloud to the Edge without any modifications and verified that it behaves the same as the graphics we verified in the Cloud.
+One of the advantages of the tutorial is that no hardware is required except for the last step, and the PC at hand may not be too powerful.
+On the other hand, what is not supported in this project is the following,
+That in actual development, starting from the update of commits, which are software changes, it may be necessary to perform automated builds, automated tests, automated deployments, and so on,
+In this case, we used agl-kvm-dmeo-platform, a recipe that can easily create an image including Hypervisor, but in actual development, the environment to run VirtIO Device will need to be developed according to the requirements.
+In actual development, however, the environment in which VirtIO Device operates may need to be developed according to the requirements.
+Therefore, this tutorial is only an introduction to how AGL enhanced by VirtIO can be used for Cloud Native/SDV development.
+However, we hope it will help you understand what VirtIO is and how it can be used effectively.
+
+P.43
+This is the last page of my presentation.
+I am usually a member of SDV EG.
+In SDV EG, we discuss how to effectively use AGL and RTOS, and how to utilize VirtIO in Multi-ECU and Non-Hypervisor environments.
+If you are interested, please check the following page.
+I look forward to your participation.
+
+
+That concludes my presentation.
+Thank you very much.
+
